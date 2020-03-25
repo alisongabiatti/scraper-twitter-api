@@ -1,12 +1,10 @@
 from flask import Flask, request, jsonify, render_template
-from sqlalchemy import func
+from flask_sqlalchemy import sqlalchemy
 from app.utils import auth_token, search
 from app.models import Tweets
 from app import app, db
 import sys
 import time
-from flask import g
-from app import redis_host
 
 
 # Home
@@ -55,5 +53,5 @@ def tweets():
 # Total de publicacao por hashtag em cada pais ou região.
 @app.route('/total')
 def total():
-    hashtags = [ {'count': tweet.count_id, 'hashtag': tweet.hashtag, 'lang': tweet.lang, 'location': tweet.location } for tweet in db.session.query(Tweets.hashtag, Tweets.lang, Tweets.location, func.count(Tweets.id).label('count_id')).group_by(Tweets.hashtag, Tweets.lang, Tweets.location)]
+    hashtags = [ {'count': tweet.count_id, 'hashtag': tweet.hashtag, 'lang': tweet.lang, 'location': tweet.location } for tweet in db.session.query(Tweets.hashtag, Tweets.lang, Tweets.location, sqlalchemy.func.count(Tweets.id).label('count_id')).group_by(Tweets.hashtag, Tweets.lang, Tweets.location)]
     return jsonify(hashtags)
