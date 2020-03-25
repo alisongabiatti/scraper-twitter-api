@@ -4,7 +4,7 @@ services:
   apm-server:
     #image: docker.elastic.co/apm/apm-server:6.2.3
     build:
-        context: .
+        context: ./apm/
     container_name: apm-server
     ports:
       - 8200:8200
@@ -47,28 +47,72 @@ services:
       - "esdata:/usr/share/elasticsearch/data"
     healthcheck:
       test: ['CMD', 'curl', '-f', '-u', 'elastic:changeme', 'http://localhost:9200']
-    # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html
-  
-      #    # Logstash
-      #  logstash:
-      #    image: docker.elastic.co/logstash/logstash:7.0.0
-      #    container_name: logstash
-      #    environment: 
-      #      - XPACK.MONITORING_ELASTICSEARCH_HOSTS="http://elasticsearch:9200" 
-      #    ports:
-      #      - 5000:5000
-      #      - 5044:5044
-      #      - 5000:5000/udp
-      #      - 9600:9600
-      #      - 9700:9700
-      #    networks:
-      #      - apm-net
-      #    volumes:
-      #      - "$PWD/pipeline:/usr/share/logstash/pipeline/"
-      #    depends_on:
-      #      elasticsearch:
-      #        condition: service_healthy
 
+# Grafana
+  grafana:
+    image: grafana/grafana
+    user: "104"
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - apm-net
+    restart: always
+    depends_on:
+      - prometheus
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.1.0
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ./prometheus/config:/etc/prometheus/
+      - ./prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+    networks:
+      - apm-net
+  
+  # APP
+  scraperapp:
+    build:
+        context: ../../.
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:@mysql:3306/crawler?charset=utf8mb4
+      - CLIENT_KEY=[CREDENCIAL_AQUI]
+      - CLIENT_SECRET=[CREDENCIAL_AQUI]
+      - APM_URL=http://apm-server:8200
+    ports:
+      - 5000:5000
+    networks:
+      - apm-net
+    depends_on:
+      - mysql
+      # - apm-server
+
+  # Mysql
+  mysql:
+    image: mysql/mysql-server
+    volumes: 
+      - ./dump.sql:/docker-entrypoint-initdb.d/datadump.sql
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - MYSQL_ROOT_HOST=%
+    ports:
+      - 3306:3306
+    networks:
+      - apm-net
 
 volumes:
   esdata:
