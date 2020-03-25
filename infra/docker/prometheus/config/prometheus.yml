@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 5s
+
+scrape_configs:
+
+- job_name: flask-app
+  scrape_interval: 5s
+  static_configs:
+    - targets:
+      - scraperapp:5000
