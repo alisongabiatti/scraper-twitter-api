@@ -7,5 +7,5 @@ class Config(object):
         'sqlite:///' + os.path.join(basedir, 'app.db')
     CLIENT_KEY = os.environ.get('CLIENT_KEY')
     CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
-    APM_URL = 'http://127.0.0.1:8200'
+    APM_URL = os.getenv('APM_URL', 'http://127.0.0.1:8200')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
